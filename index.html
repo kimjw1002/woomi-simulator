@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우미건설 울산다운1차 세대 옵션 시뮬레이터</title>
+    <style>
+        /* 우미 린(Lynn) 브랜드 컬러 변수 설정 */
+        :root {
+            --lynn-dark: rgb(53, 61, 68);    
+            --lynn-orange: rgb(230, 106, 31); 
+            --lynn-bg: rgb(226, 221, 217);    
+        }
+
+        /* 전체 화면 및 스크롤바 디자인 */
+        body { font-family: 'Malgun Gothic', sans-serif; display: flex; margin: 0; height: 100vh; background-color: var(--lynn-bg); overflow: hidden; }
+        
+        /* 📱 모바일을 위해 사이드바 너비 대폭 축소 (380px -> 260px) 및 패딩 축소 */
+        .sidebar { width: 260px; background-color: #ffffff; padding: 15px; box-shadow: 3px 0 15px rgba(0,0,0,0.08); z-index: 10; overflow-y: auto; }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #c0c8d0; border-radius: 4px; }
+        
+        /* 브랜드 로고 영역 축소 */
+        .logo-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--lynn-dark); }
+        .logo-container img.logo-woomi { height: 20px; object-fit: contain; }
+        .logo-container img.logo-lynn { height: 16px; object-fit: contain; }
+
+        /* 제목 및 그룹 박스 글자 크기 축소 */
+        .sidebar h2 { color: var(--lynn-dark); font-size: 16px; font-weight: bold; margin-top: 0; margin-bottom: 20px; line-height: 1.4; letter-spacing: -0.5px; }
+        .option-group { background: #f8f9fa; border: 1px solid #e2e6ea; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .option-group h3 { font-size: 13px; margin-top: 0; margin-bottom: 12px; color: var(--lynn-dark); font-weight: bold; }
+        
+        /* 라디오 버튼 크기 축소 */
+        label.radio-label { display: inline-block; margin-right: 10px; cursor: pointer; font-size: 12px; color: #555; transition: 0.2s; font-weight: 500;}
+        label.radio-label:hover { color: var(--lynn-orange); }
+        input[type="radio"] { margin-right: 4px; transform: scale(1.1); cursor: pointer; accent-color: var(--lynn-orange); }
+        hr { border: 0; border-top: 1px dashed #ced4da; margin: 12px 0; }
+        
+        /* 토글 스위치 텍스트 및 간격 축소 */
+        .toggle-wrapper { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .toggle-wrapper.pkg { background-color: #fcf4ef; padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #fae3d4; box-shadow: 0 1px 3px rgba(0,0,0,0.03);}
+        .toggle-label { font-size: 12px; color: #444; letter-spacing: -0.5px;}
+        .toggle-wrapper.pkg .toggle-label { font-weight: bold; color: var(--lynn-orange); font-size: 13px; }
+        
+        /* 토글 스위치 크기 비율에 맞춰 축소 */
+        .switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--lynn-orange); } 
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        /* 출력 버튼 크기 축소 */
+        .print-btn { background-color: var(--lynn-orange); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 5px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(230,106,31,0.3); transition: 0.2s; }
+        .print-btn:hover { background-color: #d15814; transform: translateY(-2px); }
+
+        /* 🖼️ 도면 영역: 여백을 최소화하여 도면이 꽉 차게 변경 */
+        .canvas-area { flex: 1; position: relative; background-color: #ffffff; overflow: hidden; display: flex; justify-content: center; align-items: center; margin: 10px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .drawing-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 0.2s ease-in-out; mix-blend-mode: multiply; padding: 10px; box-sizing: border-box; }
+        .hidden { opacity: 0; pointer-events: none; }
+
+        /* 인쇄 모드 전용 설정 */
+        @media print {
+            @page { size: landscape; margin: 0; } 
+            body { background-color: white; }
+            .sidebar { display: none !important; } 
+            .canvas-area { margin: 0; box-shadow: none; border-radius: 0; width: 100vw; height: 100vh; }
+            .drawing-layer { padding: 0; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-container">
+            <img src="우미2.png" alt="우미건설" class="logo-woomi">
+            <img src="Lynn BI.png" alt="Lynn" class="logo-lynn">
+        </div>
+        
+        <h2>울산다운1차<br>세대 옵션 시뮬레이터</h2>
+
+        <div class="option-group">
+            <h3>🏠 평면 타입 선택</h3>
+            <label class="radio-label"><input type="radio" name="type" value="a" checked onchange="changeType()"> 84A 타입</label>
+            <label class="radio-label"><input type="radio" name="type" value="b" onchange="changeType()"> 84B 타입</label>
+        </div>
+
+        <div class="option-group">
+            <h3>🚪 현관 특화</h3>
+            <div class="toggle-wrapper pkg">
+                <span class="toggle-label">현관 패키지</span>
+                <label class="switch"><input type="checkbox" id="pkg_entrance" onchange="togglePackage('pkg_entrance')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">중문 (3연동 슬라이딩)</span>
+                <label class="switch"><input type="checkbox" id="opt_door" onchange="toggleItem('opt_door')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">현관 펜트리</span>
+                <label class="switch"><input type="checkbox" id="opt_ent_pantry" onchange="toggleItem('opt_ent_pantry')"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <div class="option-group">
+            <h3>🛋️ 거실 특화</h3>
+            <div class="toggle-wrapper pkg">
+                <span class="toggle-label">거실 패키지</span>
+                <label class="switch"><input type="checkbox" id="pkg_living" onchange="togglePackage('pkg_living')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">바닥타일</span>
+                <label class="switch"><input type="checkbox" id="opt_floor" onchange="toggleItem('opt_floor')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">대형 아트월</span>
+                <label class="switch"><input type="checkbox" id="opt_artwall" onchange="toggleItem('opt_artwall')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">고급 거실 특화</span>
+                <label class="switch"><input type="checkbox" id="opt_living_premium" onchange="toggleItem('opt_living_premium')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">고급조명특화</span>
+                <label class="switch"><input type="checkbox" id="opt_light" onchange="toggleItem('opt_light')"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <div class="option-group">
+            <h3>🍽️ 주방 특화</h3>
+            <div class="toggle-wrapper pkg">
+                <span class="toggle-label">주방 패키지 (통합형)</span>
+                <label class="switch"><input type="checkbox" id="pkg_kitchen" onchange="togglePackage('pkg_kitchen')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">고급주방 특화</span>
+                <label class="switch"><input type="checkbox" id="opt_kitchen_premium" onchange="toggleItem('opt_kitchen_premium')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">주방 펜트리</span>
+                <label class="switch"><input type="checkbox" id="opt_kit_pantry" onchange="toggleItem('opt_kit_pantry')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">냉장고장 (통합형)</span>
+                <label class="switch"><input type="checkbox" id="opt_refrig" onchange="toggleItem('opt_refrig')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">주방 장식장</span>
+                <label class="switch"><input type="checkbox" id="opt_kit_display" onchange="toggleItem('opt_kit_display')"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <div class="option-group">
+            <h3>🛏️ 침실 특화</h3>
+            <div class="toggle-wrapper pkg">
+                <span class="toggle-label">침실 패키지</span>
+                <label class="switch"><input type="checkbox" id="pkg_bedroom" onchange="togglePackage('pkg_bedroom')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">고급형 드레스룸</span>
+                <label class="switch"><input type="checkbox" id="opt_dress_premium" onchange="toggleItem('opt_dress_premium')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">침실1 붙박이장</span>
+                <label class="switch"><input type="checkbox" id="opt_closet1" onchange="toggleItem('opt_closet1')"><span class="slider"></span></label>
+            </div>
+            <hr>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">일반형 드레스룸</span>
+                <label class="switch"><input type="checkbox" id="opt_dress_normal" onchange="toggleItem('opt_dress_normal')"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-wrapper">
+                <span class="toggle-label">침실2 붙박이장</span>
+                <label class="switch"><input type="checkbox" id="opt_closet2" onchange="toggleItem('opt_closet2')"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <button class="print-btn" onclick="window.print()">🖨️ 선택한 도면 출력하기</button>
+
+    </div>
+
+    <!-- 우측 도면 출력 영역 (B타입 침실 붙박이장 파일명 동기화 완료!) -->
+    <div class="canvas-area" id="canvas">
+        <img id="layer_base" class="drawing-layer" src="a타입 기본 도면.png" data-a="a타입 기본 도면.png" data-b="b타입 기본 도면.png" alt="기본 도면">
+        
+        <img id="layer_opt_door" class="drawing-layer hidden" src="a타입 중문.png" data-a="a타입 중문.png" data-b="b타입 중문.png">
+        <img id="layer_opt_ent_pantry" class="drawing-layer hidden" src="a타입 현관 펜트리.png" data-a="a타입 현관 펜트리.png" data-b="b타입 현관 펜트리.png">
+        
+        <img id="layer_opt_floor" class="drawing-layer hidden" src="a타입 바닥타일.png" data-a="a타입 바닥타일.png" data-b="b타입 바닥 타일.png">
+        <img id="layer_opt_artwall" class="drawing-layer hidden" src="a타입 대형 아트월.png" data-a="a타입 대형 아트월.png" data-b="b타입 대형 아트월.png">
+        <img id="layer_opt_living_premium" class="drawing-layer hidden" src="a타입 고급거실특화(시트알판, 픽처레일).png" data-a="a타입 고급거실특화(시트알판, 픽처레일).png" data-b="b타입 고급거실특화(시트알판, 픽처레일).png">
+        <img id="layer_opt_light" class="drawing-layer hidden" src="a타입 고급조명특화.png" data-a="a타입 고급조명특화.png" data-b="b타입 고급조명특화.png">
+        
+        <img id="layer_opt_kitchen_premium" class="drawing-layer hidden" src="a타입 아일랜드장.png" data-a="a타입 아일랜드장.png" data-b="b타입 아일랜드장.png">
+        <img id="layer_opt_kit_pantry" class="drawing-layer hidden" src="a타입 주방 펜트리.png" data-a="a타입 주방 펜트리.png" data-b="b타입 주방 펜트리.png">
+        <img id="layer_opt_refrig" class="drawing-layer hidden" src="a타입 냉장고장.png" data-a="a타입 냉장고장.png" data-b="b타입 냉장고장.png">
+        <img id="layer_opt_kit_display" class="drawing-layer hidden" src="a타입 주방 장식장.png" data-a="a타입 주방 장식장.png" data-b="b타입 주방 장식장.png">
+        
+        <img id="layer_opt_dress_premium" class="drawing-layer hidden" src="a타입 고급 드레스룸.png" data-a="a타입 고급 드레스룸.png" data-b="b타입 고급 드레스룸.png">
+        <img id="layer_opt_closet1" class="drawing-layer hidden" src="a타입 침실1 붙박이장.png" data-a="a타입 침실1 붙박이장.png" data-b="b타입 침실1 붙박이장.png">
+        <img id="layer_opt_dress_normal" class="drawing-layer hidden" src="a타입 일반 드레스룸.png" data-a="a타입 일반 드레스룸.png" data-b="b타입 일반 드레스룸.png">
+        <img id="layer_opt_closet2" class="drawing-layer hidden" src="a타입 침실2 붙박이장.png" data-a="a타입 침실2 붙박이장.png" data-b="b타입 침실2 붙박이장.png">
+    </div>
+
+    <!-- 스마트 제어 자바스크립트 로직 -->
+    <script>
+        const packageConfig = {
+            'pkg_entrance': ['opt_door', 'opt_ent_pantry'],
+            'pkg_living': ['opt_floor', 'opt_artwall', 'opt_living_premium', 'opt_light'],
+            'pkg_kitchen': ['opt_kitchen_premium', 'opt_kit_pantry', 'opt_refrig', 'opt_kit_display'],
+            'pkg_bedroom': ['opt_dress_premium', 'opt_closet1']
+        };
+
+        const allItems = [
+            'opt_door', 'opt_ent_pantry', 'opt_floor', 'opt_artwall', 'opt_living_premium', 'opt_light',
+            'opt_kitchen_premium', 'opt_kit_pantry', 'opt_refrig', 'opt_kit_display',
+            'opt_dress_premium', 'opt_closet1', 'opt_dress_normal', 'opt_closet2'
+        ];
+
+        function togglePackage(pkgId) {
+            const isChecked = document.getElementById(pkgId).checked;
+            const items = packageConfig[pkgId];
+            
+            items.forEach(itemId => {
+                document.getElementById(itemId).checked = isChecked;
+                if (itemId === 'opt_dress_premium' && isChecked) {
+                    document.getElementById('opt_dress_normal').checked = false;
+                }
+            });
+            updateCanvas();
+        }
+
+        function toggleItem(itemId) {
+            const isChecked = document.getElementById(itemId).checked;
+
+            if (itemId === 'opt_dress_premium' && isChecked) {
+                document.getElementById('opt_dress_normal').checked = false;
+            } else if (itemId === 'opt_dress_normal' && isChecked) {
+                document.getElementById('opt_dress_premium').checked = false;
+            }
+
+            for (const [pkgId, items] of Object.entries(packageConfig)) {
+                if (items.includes(itemId)) {
+                    const allChecked = items.every(id => document.getElementById(id).checked);
+                    document.getElementById(pkgId).checked = allChecked;
+                }
+            }
+            updateCanvas();
+        }
+
+        function updateCanvas() {
+            allItems.forEach(itemId => {
+                const layer = document.getElementById('layer_' + itemId);
+                if (layer) {
+                    if (document.getElementById(itemId).checked) {
+                        layer.classList.remove('hidden');
+                    } else {
+                        layer.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        function changeType() {
+            const type = document.querySelector('input[name="type"]:checked').value; 
+            const layers = document.querySelectorAll('.drawing-layer');
+            
+            layers.forEach(layer => {
+                const newSrc = layer.getAttribute('data-' + type);
+                if (newSrc) {
+                    layer.src = newSrc; 
+                }
+            });
+            updateCanvas();
+        }
+    </script>
+</body>
+</html>
