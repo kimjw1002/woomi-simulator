@@ -161,13 +161,21 @@
                 <label class="switch"><input type="checkbox" id="opt_dress_premium" onchange="toggleItem('opt_dress_premium')"><span class="slider"></span></label>
             </div>
             <div class="toggle-wrapper">
-                <span class="toggle-label">침실1 붙박이장</span>
-                <label class="switch"><input type="checkbox" id="opt_closet1" onchange="toggleItem('opt_closet1')"><span class="slider"></span></label>
-            </div>
-            <hr>
-            <div class="toggle-wrapper">
                 <span class="toggle-label">일반형 드레스룸</span>
                 <label class="switch"><input type="checkbox" id="opt_dress_normal" onchange="toggleItem('opt_dress_normal')"><span class="slider"></span></label>
+            </div>
+            
+            <!-- ✨ B타입 전용: 드레스룸을 선택해야만 나타나는 마법의 옵션! -->
+            <div class="toggle-wrapper" id="wrap_dress_closet" style="display: none; background-color: #f3f6f9; padding: 10px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid var(--lynn-orange);">
+                <span class="toggle-label" id="label_dress_closet" style="color: #444; font-weight: bold;">↳ 붙박이장 추가</span>
+                <label class="switch"><input type="checkbox" id="opt_dress_closet" onchange="toggleItem('opt_dress_closet')"><span class="slider"></span></label>
+            </div>
+
+            <hr>
+            <!-- 아래 두 개는 기존처럼 독립적으로 작동 -->
+            <div class="toggle-wrapper">
+                <span class="toggle-label">침실1 붙박이장</span>
+                <label class="switch"><input type="checkbox" id="opt_closet1" onchange="toggleItem('opt_closet1')"><span class="slider"></span></label>
             </div>
             <div class="toggle-wrapper">
                 <span class="toggle-label">침실2 붙박이장</span>
@@ -179,7 +187,7 @@
 
     </div>
 
-    <!-- 우측 도면 출력 영역 (B타입 침실 붙박이장 파일명 동기화 완료!) -->
+    <!-- 🖼️ 도면 영역 -->
     <div class="canvas-area" id="canvas">
         <img id="layer_base" class="drawing-layer" src="a타입 기본 도면.png" data-a="a타입 기본 도면.png" data-b="b타입 기본 도면.png" alt="기본 도면">
         
@@ -196,9 +204,13 @@
         <img id="layer_opt_refrig" class="drawing-layer hidden" src="a타입 냉장고장.png" data-a="a타입 냉장고장.png" data-b="b타입 냉장고장.png">
         <img id="layer_opt_kit_display" class="drawing-layer hidden" src="a타입 주방 장식장.png" data-a="a타입 주방 장식장.png" data-b="b타입 주방 장식장.png">
         
+        <!-- 드레스룸 관련 3가지 레이어 -->
         <img id="layer_opt_dress_premium" class="drawing-layer hidden" src="a타입 고급 드레스룸.png" data-a="a타입 고급 드레스룸.png" data-b="b타입 고급 드레스룸.png">
-        <img id="layer_opt_closet1" class="drawing-layer hidden" src="a타입 침실1 붙박이장.png" data-a="a타입 침실1 붙박이장.png" data-b="b타입 침실1 붙박이장.png">
         <img id="layer_opt_dress_normal" class="drawing-layer hidden" src="a타입 일반 드레스룸.png" data-a="a타입 일반 드레스룸.png" data-b="b타입 일반 드레스룸.png">
+        <img id="layer_opt_dress_closet" class="drawing-layer hidden" src=""> <!-- 스크립트가 알아서 이미지 파일명을 채워줍니다 -->
+        
+        <!-- 침실1, 2 붙박이장 레이어 -->
+        <img id="layer_opt_closet1" class="drawing-layer hidden" src="a타입 침실1 붙박이장.png" data-a="a타입 침실1 붙박이장.png" data-b="b타입 침실1 붙박이장.png">
         <img id="layer_opt_closet2" class="drawing-layer hidden" src="a타입 침실2 붙박이장.png" data-a="a타입 침실2 붙박이장.png" data-b="b타입 침실2 붙박이장.png">
     </div>
 
@@ -208,13 +220,13 @@
             'pkg_entrance': ['opt_door', 'opt_ent_pantry'],
             'pkg_living': ['opt_floor', 'opt_artwall', 'opt_living_premium', 'opt_light'],
             'pkg_kitchen': ['opt_kitchen_premium', 'opt_kit_pantry', 'opt_refrig', 'opt_kit_display'],
-            'pkg_bedroom': ['opt_dress_premium', 'opt_closet1']
+            'pkg_bedroom': ['opt_dress_premium', 'opt_closet1'] 
         };
 
         const allItems = [
             'opt_door', 'opt_ent_pantry', 'opt_floor', 'opt_artwall', 'opt_living_premium', 'opt_light',
             'opt_kitchen_premium', 'opt_kit_pantry', 'opt_refrig', 'opt_kit_display',
-            'opt_dress_premium', 'opt_closet1', 'opt_dress_normal', 'opt_closet2'
+            'opt_dress_premium', 'opt_dress_normal', 'opt_dress_closet', 'opt_closet1', 'opt_closet2'
         ];
 
         function togglePackage(pkgId) {
@@ -223,6 +235,7 @@
             
             items.forEach(itemId => {
                 document.getElementById(itemId).checked = isChecked;
+                // 패키지 켤 때 드레스룸 중복 방지
                 if (itemId === 'opt_dress_premium' && isChecked) {
                     document.getElementById('opt_dress_normal').checked = false;
                 }
@@ -233,6 +246,7 @@
         function toggleItem(itemId) {
             const isChecked = document.getElementById(itemId).checked;
 
+            // 일반/고급 드레스룸 상호 배타적 동작
             if (itemId === 'opt_dress_premium' && isChecked) {
                 document.getElementById('opt_dress_normal').checked = false;
             } else if (itemId === 'opt_dress_normal' && isChecked) {
@@ -249,14 +263,46 @@
         }
 
         function updateCanvas() {
+            const type = document.querySelector('input[name="type"]:checked').value; 
+            
+            const dressClosetWrap = document.getElementById('wrap_dress_closet');
+            const labelDressCloset = document.getElementById('label_dress_closet');
+            const isPremium = document.getElementById('opt_dress_premium').checked;
+            const isNormal = document.getElementById('opt_dress_normal').checked;
+
+            // ✨ B타입이고, 드레스룸 중 하나를 켰을 때만 '붙박이장 추가' 스위치 표시
+            if (type === 'b' && (isPremium || isNormal)) {
+                dressClosetWrap.style.display = 'flex';
+                // 선택한 드레스룸에 맞춰 스위치 이름 변경
+                if (isPremium) {
+                    labelDressCloset.innerText = '↳ 고급 붙박이장 추가';
+                } else {
+                    labelDressCloset.innerText = '↳ 일반 붙박이장 추가';
+                }
+            } else {
+                // A타입이거나 드레스룸을 안 골랐으면 스위치 숨기고 강제 체크 해제
+                dressClosetWrap.style.display = 'none';
+                document.getElementById('opt_dress_closet').checked = false; 
+            }
+
+            // 모든 이미지 표시/숨김 처리
             allItems.forEach(itemId => {
                 const layer = document.getElementById('layer_' + itemId);
-                if (layer) {
-                    if (document.getElementById(itemId).checked) {
-                        layer.classList.remove('hidden');
-                    } else {
-                        layer.classList.add('hidden');
+                if (!layer) return;
+
+                // ✨ B타입 맞춤형 이미지 소스 변경 로직
+                if (itemId === 'opt_dress_closet' && type === 'b') {
+                    if (isPremium) {
+                        layer.src = 'b타입 고급 붙박이장.png';
+                    } else if (isNormal) {
+                        layer.src = 'b타입 일반 붙박이장.png';
                     }
+                }
+
+                if (document.getElementById(itemId).checked) {
+                    layer.classList.remove('hidden');
+                } else {
+                    layer.classList.add('hidden');
                 }
             });
         }
@@ -267,7 +313,7 @@
             
             layers.forEach(layer => {
                 const newSrc = layer.getAttribute('data-' + type);
-                if (newSrc) {
+                if (newSrc && layer.id !== 'layer_opt_dress_closet') {
                     layer.src = newSrc; 
                 }
             });
